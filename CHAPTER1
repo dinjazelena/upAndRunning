@@ -1,0 +1,28 @@
+Why Terraform?
+
+Not so long ago, there were DEV and OPS team, completely separated.
+Where DEV team would work on a software application, ship over to OPS team, which
+would need to make it work on hardware.
+
+Nowdays, instead of investing in hardware, companies invest in CLOUD and tools like:
+Chef, Puppet, Terraform, Docker and Kubernetes
+Which now allows both DEV and OPS to work on software.
+
+Goal of DevOps is to make software delivery vastly more efficient.
+Goal is to automate as much of the software delivery as possible.
+This means that we manage infrastructure not by clicking around a web page 
+or manually executing shell commands, but through code.
+
+This concept is called INFRASTRUCTURE AS CODE. 
+
+DEFINE, DEPLOY, UPDATE DESTROY
+
+5 broad categories of IaC tools:
+
+1. Ad hoc scripts (Bash, Python scripts); Good for small tasks, terrible for actual management of INFRA
+2. Configuration management tools (Chef, Puppet, Ansible);  Installs and manage software on existing INFRA
+3. Server templating tools (Docker)
+4. Orchestration tools(Kubernetes, Amazon ECS, Docker Swarm)
+5. Provisioning tools(Terraform, Pulumi)
+
+Comparison of tools

@@ -1,0 +1,35 @@
+Terraform code is written in the HashiCorp Configuration Language(HCL) in files with extension .tf. 
+It is a declarative Language, so goal is to describe the infrastructure we want, and Terraform will figure out how to create it. 
+
+AWS has data centers all over the world, grouped into regions.
+An AWS region is a separate geographic area, such as us-east-2, eu-west-1.
+Within each region, there are multiple isolated data centers known as Availability Zones(AZs) such as eu-central-1b, us-east2.
+
+ami -> Amazon Machine Image. Different for each OS on region level. 
+instance_type -> Type of EC2 
+
+Terraform init will scan the code, check which providers do we use and download code for given providers in .terraform/. 
+Terraform binary does not include code for providers. 
+
+Terraform plan command lets u see what Terraform will do before actually making changes.
+Great for sanity checking of your code before unleashing it onto world. 
+Output is similiar to git diff 
++ means creates new stuff
+- means delete stuff
+~ means modify stuff 
+
+<<-EOF EOF are Terraform heredoc syntax, which allows us to create multiline strings without having to insert \n all over the place
+
+user_data 
+user_data_replace_on_change -> This means Terraform will create a new instance when there is change in user data. Because user data runs only on first boot. By default Terraform tries to modify, but since it runs only on first boot, we need a new instance when we change user data. 
+
+We need to create aws security group in order to allow traffic on our EC2 machine.
+
+from_port -> Start port range
+to_port -> End range port range
+protocol -> tcp 
+cicdr_blocks -> From which IP range we can allow traffic
+
+With terraform we can use references of on resources into another.
+By doing this we create a implicit dependency. Terraform parses these dependencies, builds a dependency graph from them, and uses
+that to automatically determine in which order it sohuld create resources.
