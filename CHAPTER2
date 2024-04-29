@@ -33,3 +33,113 @@ cicdr_blocks -> From which IP range we can allow traffic
 With terraform we can use references of on resources into another.
 By doing this we create a implicit dependency. Terraform parses these dependencies, builds a dependency graph from them, and uses
 that to automatically determine in which order it sohuld create resources.
+
+
+Examples are not deployed in Default VPC but also into the default subnets of that VPC.
+A VPC is partitioned into one or more subnets, each with its own IP address.
+The subnets in the Default VPC are all public subnets, which means they get ip addresses which are available from public internet.
+This is a security risk and in production you should run your services into private VPC.
+
+
+DRY PRINCIPAL
+
+Every piece of knowledge must have a single, unambiguous, authoritative representation within a system.
+Terraform allows us to define input variables to tackle this problem.
+
+INPUT VARIABLES
+OUTPUT VARIABLES
+
+These are key for creating a CONFIGURABLE and REUSABLE infrastructure code
+
+
+Running a single server is a good start, but in the real world, a single server is a single point of failure.
+If the server crashes, or if it becomes overloaded from too much traffic, users will be unable to acces site.
+Solution is to run a cluster of servers, routing around servers that go down and adjusting the size of the cluster up
+or down based on traffic.
+
+Auto Scaling Group(ASG):
+Launching cluster of EC2 instances, monitoring health of each instance, replacing failed instances and adjusting size of the cluster
+in response to load.
+
+First we need to. create aws_launch_confguration where we describe how we configure each EC2 machine in ASG.
+Then we create ASG and refrence this configuration with min and max size of machines.
+
+ASG uses refrence to fill in the launch configuration name. This leads to a problem:
+launch configuration are immutable, so if u change an parameter of launch ocnfiguration, Terraform will try to replace it.
+Normally, when replacing a resource, Terraform would delete the old resource first and then creates its replacement,
+but becuase ASG has a reference to hte old resource, Terraform wont be able to delete it.
+
+To solve this problem, we can use lifecycle setting.
+Every Terraform resource supports several lifecycle settings that conifgure how that resource is created, updated, and deleted.
+We can set 'create_before_destroy' to True.
+
+Now we need to specifce subnets_ids. In which VPC subnets the EC2 instances should be deployed.
+Each subnet lives in isolated AWS AZ(isolated data center), so by deploying your instances across multiple subnets, we ensure that
+service keep running even if something happens to data center.
+
+Data sources does not create anything new, its just a way to query the providers APIs for data and to make that data available for rest of the
+Terraform code.
+Data source represents a piece of read-only information that is fetched from the provider every time you run Terraform.
+
+
+
+At this stage, we can have up to 10 machines responding to traffic at max, and each machine with its own separate IP address, but typically
+we want to give our end users a single IP to use.
+For that we can deploy load balancer to distribute traffic across servers and give all users the IP(DNS name) of the load balancer.
+
+AMAZON ELASTIC LOAD BALANCER(ELB):
+
+Application Load Balancer(ALB)
+
+Best suited for load balancing of HTTP and HTTPS traffic.
+
+Network Load Balancer(NLB)
+
+Best suited for load balancing of TCP, UDP and TLS traffic.
+
+Classic Load Balancer(CLB)
+
+Legacy load balancer.
+
+
+ALB consists of:
+
+Listener -> Listens on a specific port(e.g, 80) and protocol(HTTP)
+
+Listener rule -> Takes requests that come into a listener and sends those that match specific paths or hostnames
+
+Target groups 
+
+One or more servers that recieve requests from the load balancer. Target group also performs healtch check.
+
+
+
+1. Create ALB itself using aws_lb
+
+Create main lb resource where we specify subnets of default VPC and type of load balancer
+
+2. Create aws_lb_listener
+
+We configure ALB to listen on default HTTP port, port 80, use HTTP as protocol, and send simple 404 page as the default
+response for requests that dont match any listener rules.
+
+3. Create a security group for ALB
+
+By default it does not allow any incoming or outgoing traffic.
+We should allow requests from port 80 and allow outgoing requests to all PORTs.
+
+4. Create a aws_lb_target_group
+
+Which does health checks by creaing HTTP requests on provided interval 
+
+
+4. Create a listener rule to connect everything
+
+
+
+
+
+
+
+
+
