@@ -1,0 +1,154 @@
+Every time we run Terraform, it records information about what infrastructure it created in Terraform state file.
+Every time we run Terraform, if fetches latest status of infrastructure and compare that to whats in Terraform configuration to
+determine what needs to be applied.
+Terraform plan gives diff between configuration state in terraform state file and in terraform configuration files.
+
+On personal project, storing terraform state file locally is just fine.
+But working on a real product as a team has we can run into several problems:
+
+1. Shared storage for state files
+To be able to use Terraform to update infrastructure, each team member needs access to same terraform state file.
+Which means terraform state file needs to be stored in shared place.
+
+2. Locking state files
+When state file is shared, we run into new problem: locking.
+If two members are running Terraform at the same time, we can run into
+race conditions as multiple Terraform proceses maek concurent updates to state files,
+leading to conflicts, data loss, and state file corruption.
+
+3. Isolating state files
+Best pratice is to isolate our infrastructure into stages like dev, staging, prod.
+But when we make changes into test environment, we wanna make sure not to break anything in production.
+And if we keep all of our infrastructure in a single state file, there is no isolation between environments.
+
+SHARED STORAGE FOR STATE FILES
+
+Most logical way of storing files for sharing and collaboration is version control system like Git.
+Terraform files should be ofcourse version controled, but storing terraform state file is a bad idea for Git 
+for couple reasons:
+
+1. Manuel error 
+Its easy to forget to pull down latest changes before running Terraform or to push latest changes to version control system after running Terraform.
+Its just a matter of time before someone runs Terraform with out-of-date state fiels and accidently rolls back or duplicate deployments.
+
+2. Locking
+Most version control system do not support Locking that would prevent two team members from running terraform apply on same state file at the same time.
+
+3. Secrets
+All data in terraform state files is a plain text which also stores sensistive data. Which should not be publicly available on Git.
+
+
+Intead of Version Control System, best way to manage shared storage for state file is to use Terraform built in for remote backends.
+Defalt backend is local backend which storages state file on local disk.
+Remote backend allow you to store state file in a remote, shared store.
+
+
+Remote backend solve the three issues above:
+
+1. Manuel error
+When we use remote backend, Terraform will automatically load the state file form backend every time we run plan, apply, and it will automatically
+store the state file in the backend after each apply, so no change of manual error
+
+2. Locking
+Most of the remote backends natively support locking. When running terraofmr apply, terraform will automatically acquire a lock,
+if somoene else is ready to run appply, they will have a lock and would need to wait.
+
+3. Secrects
+Most of the remote backends supports encryption for sensitive data.
+
+Most popular solution for remote backend is S3 Bucket with DynamoDB for locking.
+
+
+1. Create S3 Bucket  with 'aws_s3_bucket' and put lifecycle to prevent_destroy to true
+2. Allow versioning of Bucket so we can see previous states of state file with 'aws_s3_bucket_versioning'
+3. In order to enable encryption because of sensitive data we create 'aws_s3_bucket_server_side_encryption_configuration' and set encryption algortihm
+4. In order to block all public accesses towards our bucket we create 'aws_s3_bucket_public_access_block'
+5. Create DynamoDB table to use for locking.
+DynamoDB is Amazon's distributed key-value store. It supports strongly consistent reads and conditional writes. In ordet to create DynamoDB table for Locking,
+we must create DynamoDB table that has primary key LockID
+6. Now in order to store your state file in above configuration, we need to tell terraform with terraform backend configuration 
+
+Terraform is automatically pushing and pulling state data to and from S3, and S3 is storing every revision of state file, which can be useful for debugging and
+rolling back to older cersions if something goes wrong.
+
+Limitation with Terraform Backend
+
+1. In order to allow terraform backend we first need to create S3 Bucket and DynamoDB and deploy code with local backend.
+   Then go back to Terraform code and replace to remote backend with newly created S3 Bucket and DynamoDB table.
+
+2. Backend block in Terraform does not allow any variables and refreences.
+
+
+STATE FILE ISOLATION
+
+With remote backend and locking, collaboration is no longer a problem.
+However, there is still one more problem remaining: isolation.
+When starting with Terraform usually teams start with creating infrastructure in a single
+Terraform file or a single set of Terraform files in one folder.
+Problem with this is that all of terraform state is now stored in single fil too,
+and mistake anywhere could break everything.
+For example, deplying to development could break infrastructure in production since both are on same state file.
+The whole point of having separate environments is that they are isolated from one another, if we manage all environments from single
+set of Terraform configurations, we are breaking environments.
+Instead of defining all environments in a single set of Terraform configurations, we want to defien each environment in separate set of configurations,
+so one environment is completely isolated from the others.
+
+Two ways to isolate:
+
+1. Isolation via workspaces
+2. Isolation via file layout
+
+
+Isolation via Workspaces
+
+Terraform workspaces allow us to store Terraform state in multiple, separated named workspaces.
+Terraform starts with a single workspace called 'default', and if we never explictily specify a workspace
+the default workspace is the one u will use the entire tieme.
+
+Terraform workspaces can be a great way to quickly spin up and tear down different versions of your code, but comes with few drawbacks.
+
+1. State files for all of your workspaces are stored in the same backend. So u use same authentication and access controls for workspaces,
+which is major reason why workspaces are unsuitable for isolating environments.
+2. Workspaces are not visible in code or on the terminal unless we run terraform workspace command.
+3. Lack of visibility makes it very error prone.
+
+For this reasons terraform workspaces should be avoided for separation of environments.
+
+ISOLATION VIA FILE LAYOUT
+
+To achieve full isolation between environments we need to:
+
+* Put Terraform configuration files for each environment into a separate folder
+* Configure a different backend for each environment, using different authentication mechanisms and access controls: each environment could live in a separate AWS account.
+
+Sometimes we want to take isolation concept beyond environments and down to component level. For example u have VPC infrastructure which u deploy once in couple of months, but also
+u have web servers which u change much much often on weekly basis. If we configure both of them in same folder, we are just putting at risk of breaking VPC which is not changed frequently.
+
+Ideally we have folder for each environment and folder for each component in given environment.
+
+dependencies.tf - Common place to put data sources
+providers.tf - Provider block
+main-xxx.tf - If main file is getting large due to alot of resources we can split based on logic
+
+Why file layout?
+
+* Clear code/ environment layout
+* Isolation
+
+But these advantage are also a drawbacks too:
+
+Working with multiple folders
+* It prevents from accidently blowing up entire infrastructure in one command, but it also prevents u from creaeting a whole infrastructure in one commmand.
+Solution terragrunt
+
+Copy/paste
+* duplication 
+solution: terraform modules
+
+Resource dependencies
+
+
+
+
+
+
