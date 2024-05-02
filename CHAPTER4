@@ -1,0 +1,47 @@
+Example in CHAPTER3 works great as a first environment, but typically we need at least two environments: 
+one for team's internal testing and one that real users can access("production").
+
+Ideally, two environments are nearly identical, though u might run slightly fewer/smaller servers in staging to save money.
+
+How can we avoid copying same code from stage to prod?
+With Terraform, we can put our code inside of a Terraform module and reuse module in multiple places throughout your code. 
+Instead of having the same code copied and pasted in the staging and production environments, we will be able to have both 
+environments reuse code from same module.
+
+Module Basics
+
+Terraform module is very simple, any set of Terraform configuration files in folder is a module.
+Providers should be configured only in root modules and not in reusable modules.
+Currently all of the names are hardcoded. If we use this module in same AWS account we will get errors.
+To fix this issues, we need to add configurable inputs to webserver-cluster module so it can behave differently in different environment.
+
+Module Inputs
+
+Configurable input variables in order to change parameters based on environment.(variables.tf)
+
+Module Locals
+
+We should use locals when we want to do some intermediate processing of variables, but also when there alot of occasions of some variable
+repeating over and over, but we dont want to make it as input variable because it could lead to user overriding it.
+Locals make code easier to read and maintain, so use them alot.
+
+Module Outputs
+
+Sometimes there are some dependies of resources being created which also depends on configurable parameters, in order to fix this
+use module outputs to reference stuff like this.
+
+
+Module Gotchas
+
+File Paths
+
+Referencing the file is relative to the current working module, so when we just reuse module it expects file to be relative to reused module but its not there.
+So we need to use expressions known as path references.
+
+path.module, path.root, path.cwd
+
+Inline blocks 
+
+
+
+
