@@ -14,19 +14,14 @@ terraform {
 }
 
 resource "aws_instance" "example" {
-  instance_type = terraform.workspace == "default" ? "t2.medium" : "t2.micro"
-  ami           = "ami-023adaba598e661ac"
-}
-
-resource "aws_instance" "example" {
   ami           = "ami-023adaba598e661ac"
   instance_type = "t2.micro"
 
-  user_data = <<-EOF
-              #!/bin/bash
-              echo "Hello, World" > index.html
-              nohup busybox httpd -f -p ${var.server_port} &
-              EOF
+  user_data = templatefile("user-data.sh", {
+    server_port = var.server_port
+    db_address  = data.terraform_remote_state.db.outputs.address
+    db_port     = data.terraform_remote_state.db.outputs.port
+  })
 
   user_data_replace_on_change = true
 
@@ -60,11 +55,11 @@ resource "aws_launch_configuration" "example" {
   instance_type   = "t2.micro"
   security_groups = [aws_security_group.instance.id]
 
-  user_data = <<-EOF
-                #!/bin/bash
-                echo "Hello, World" > index.html
-                nohup busybox httpd -f -p ${var.server_port} &
-                EOF
+  user_data = templatefile("user-data.sh", {
+    server_port = var.server_port
+    db_address  = data.terraform_remote_state.db.outputs.address
+    db_port     = data.terraform_remote_state.db.outputs.port
+  })
 
 }
 
@@ -177,4 +172,14 @@ resource "aws_lb_listener_rule" "asg" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.asg.arn
   }
+}
+
+data "terraform_remote_state" "db" {
+  backend = "s3"
+  config = {
+    bucket = "terraform-state-loc"
+    key    = "stage/data-stores/mysql/terraform.tfstate"
+    region = "eu-central-1"
+  }
+
 }
